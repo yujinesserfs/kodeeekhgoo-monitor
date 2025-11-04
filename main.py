@@ -12,13 +12,19 @@ def fetch_latest_position():
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "html.parser")
 
-    # "최근 7일간 포지션" 문구 찾기
-    target = soup.find("p", string=lambda t: t and "최근 7일간 포지션" in t)
+    # "최근 7일간 포지션" 문구를 포함한 p 태그 찾기 (속성 무시)
+    target = None
+    for p in soup.find_all("p"):
+        text = p.get_text(strip=True)
+        if "최근 7일간 포지션" in text:
+            target = p
+            break
+
     if not target:
         print("⚠️ '최근 7일간 포지션' 문구를 찾지 못했습니다.")
         return None
 
-    # 그 다음 나오는 테이블 찾기
+    # 그 다음 테이블 찾기
     table = target.find_next("table")
     if not table:
         print("⚠️ 포지션 테이블을 찾지 못했습니다.")
@@ -47,19 +53,4 @@ def main():
     print("🔹 Fetching latest position from webpage...")
     latest = fetch_latest_position()
     if not latest:
-        return {"last_hash": last_hash}
-
-    current_hash = hashlib.sha256(latest.encode()).hexdigest()
-
-    if current_hash != last_hash:
-        print("📢 변경 감지됨! 텔레그램 발송 중...")
-        message = f"📊 코덕후 신규 포지션 감지!\n\n{latest}\n\n👉 {URL}"
-        send_telegram(message)
-        print("✅ 전송 완료!")
-        return {"last_hash": current_hash}
-    else:
-        print("🔸 변화 없음.")
-        return {"last_hash": last_hash}
-
-if __name__ == "__main__":
-    main()
+        return
