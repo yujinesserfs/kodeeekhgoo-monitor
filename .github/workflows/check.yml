@@ -22,20 +22,22 @@ jobs:
         run: |
           pip install requests beautifulsoup4 selenium webdriver-manager
 
-      - name: Download LAST_HASH artifact
+      - name: Download last_hash artifact (if exists)
         uses: actions/download-artifact@v4
         with:
           name: last-hash
           path: .
+        continue-on-error: true  # 첫 실행 시 artifact 없으면 무시
 
       - name: Run Python script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          LAST_HASH: ${{ secrets.LAST_HASH }}
         run: python main.py
 
-      - name: Upload LAST_HASH artifact
-        if: success()
+      - name: Upload last_hash artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: last-hash
