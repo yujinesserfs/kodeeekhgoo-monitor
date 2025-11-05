@@ -2,16 +2,14 @@ name: Monitor Kodeeekhgoo Positions
 
 on:
   schedule:
-    - cron: "*/5 * * * *"  # 5분마다 실행
+    - cron: "*/5 * * * *"   # 5분마다 실행
   workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -19,25 +17,24 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: |
-          pip install requests beautifulsoup4 selenium webdriver-manager
+        run: pip install requests beautifulsoup4 selenium webdriver-manager
 
       - name: Download LAST_HASH artifact
         uses: actions/download-artifact@v4
         with:
           name: last-hash
-          path: ./artifact || true  # artifact 없으면 무시
+          path: artifact
+        continue-on-error: true  # 첫 실행 시 artifact 없으면 그냥 지나감
 
       - name: Run Python script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          LAST_HASH: ${{ secrets.LAST_HASH }}  # 첫 실행 시 없으면 빈값
+          LAST_HASH: ${{ steps.download-artifact.outputs.LAST_HASH || '' }}
         run: python main.py
 
-      - name: Upload new LAST_HASH
-        if: always()
+      - name: Upload LAST_HASH artifact
         uses: actions/upload-artifact@v4
         with:
           name: last-hash
-          path: ./artifact
+          path: artifact/last-hash.txt
