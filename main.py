@@ -2,11 +2,12 @@ import os
 import hashlib
 import requests
 from bs4 import BeautifulSoup
+import traceback
 
 URL = "https://wonyoddi.com/ccts/deog.ku"
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-HASH_FILE = "last_hash.txt"  # 런 간 저장 파일
+HASH_FILE = "last_hash.txt"
 
 def fetch_latest_position():
     try:
@@ -35,24 +36,20 @@ def fetch_latest_position():
             return None
 
         cells = [td.get_text(strip=True) for td in first_row.find_all("td")]
-        position_text = " | ".join(cells)
-        print(f"✅ 최신 포지션: {position_text}")
-        return position_text
+        return " | ".join(cells)
 
-    except Exception as e:
-        print("❌ 오류:", e)
+    except Exception:
+        print(traceback.format_exc())
         return None
 
 def send_telegram(msg):
     if not BOT_TOKEN or not CHAT_ID:
-        print("⚠️ TELEGRAM 환경변수 없음")
+        print("⚠️ TELEGRAM_BOT_TOKEN 또는 CHAT_ID 환경변수가 없습니다.")
         return
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": msg}
     try:
-        r = requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            data={"chat_id": CHAT_ID, "text": msg},
-            timeout=10
-        )
+        r = requests.post(url, data=payload, timeout=10)
         if r.status_code == 200:
             print("📩 텔레그램 전송 완료")
         else:
@@ -60,29 +57,30 @@ def send_telegram(msg):
     except Exception as e:
         print("❌ 텔레그램 오류:", e)
 
-def main():
-    # 이전 해시 읽기
-    last_hash = ""
+def read_last_hash():
     if os.path.exists(HASH_FILE):
         with open(HASH_FILE, "r") as f:
-            last_hash = f.read().strip()
-    print("🔹 이전 해시:", last_hash)
+            return f.read().strip()
+    return ""
 
-    # 최신 포지션 가져오기
+def write_last_hash(new_hash):
+    with open(HASH_FILE, "w") as f:
+        f.write(new_hash)
+
+def main():
+    print("🔹 Fetching last_hash from artifact")
+    last_hash = read_last_hash()
+
+    print("🔹 Fetching latest position...")
     latest = fetch_latest_position()
     if not latest:
         return
 
-    new_hash = hashlib.md5(latest.encode("utf-8")).hexdigest()
-    print("🔹 새로운 해시:", new_hash)
-
-    # 변경 감지
-    if new_hash != last_hash:
-        print("🔸 포지션 변경 감지!")
+    current_hash = hashlib.sha256(latest.encode("utf-8")).hexdigest()
+    if current_hash != last_hash:
+        print("🔸 포지션 변경 감지됨!")
         send_telegram(f"🔔 코덕후 새 포지션 발생!\n\n{latest}\n\n👉 {URL}")
-        # 해시 저장
-        with open(HASH_FILE, "w") as f:
-            f.write(new_hash)
+        write_last_hash(current_hash)
     else:
         print("✅ 변경 없음.")
 
