@@ -2,19 +2,21 @@ import os
 import time
 import hashlib
 import requests
+from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-from datetime import datetime, timedelta
 
+# ===== 설정 =====
 URL = "https://wonyoddi.com/ccts/deog.ku"
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+# =================
 
 def fetch_latest_position():
-    """자바스크립트 렌더링 후 '최근 7일간 포지션' 첫 번째 행 추출"""
+    """셀레니움으로 JS 렌더링 후 '최근 7일간 포지션' 첫 번째 행 추출"""
     try:
         chrome_options = Options()
         chrome_options.add_argument("--headless")
@@ -46,12 +48,23 @@ def fetch_latest_position():
             print("⚠️ 포지션 테이블을 찾지 못했습니다.")
             return None
 
+        # 첫 번째 데이터 행
         first_row = table.select_one("tbody tr") or table.select_one("tr:nth-of-type(2)")
         if not first_row:
             print("⚠️ 테이블 안에 데이터가 없습니다.")
             return None
 
         cells = [td.get_text(strip=True) for td in first_row.find_all("td")]
+
+        # 시간 컬럼을 KST로 변환 (4번째 컬럼 기준)
+        try:
+            raw_time = cells[4]
+            dt_obj = datetime.strptime(raw_time, "%Y-%m-%d %H:%M:%S")
+            dt_kst = dt_obj + timedelta(hours=9)
+            cells[4] = dt_kst.strftime("%Y-%m-%d %H:%M:%S KST")
+        except Exception:
+            pass  # 변환 실패 시 원래 문자열 유지
+
         position_text = " | ".join(cells)
         print(f"✅ 최신 포지션: {position_text}")
         return position_text
@@ -60,12 +73,12 @@ def fetch_latest_position():
         print(f"❌ Selenium 에러: {e}")
         return None
 
+
 def send_telegram(msg):
-    """텔레그램으로 메시지 전송"""
+    """텔레그램 메시지 전송"""
     if not BOT_TOKEN or not CHAT_ID:
         print("⚠️ TELEGRAM_BOT_TOKEN 또는 CHAT_ID 환경변수가 없습니다.")
         return
-
     tg_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": msg}
     try:
@@ -76,6 +89,7 @@ def send_telegram(msg):
             print("📩 텔레그램 전송 완료")
     except Exception as e:
         print("❌ 텔레그램 오류:", e)
+
 
 def main():
     last_hash = os.getenv("LAST_HASH", "")
@@ -89,17 +103,14 @@ def main():
     print("🔹 현재 해시:", current_hash)
 
     if last_hash != current_hash:
-        # 한국시간 표시
-        now_kst = datetime.utcnow() + timedelta(hours=9)
-        time_str = now_kst.strftime("%Y-%m-%d %H:%M:%S KST")
-
         print("🔸 포지션 변경 감지됨!")
-        send_telegram(f"🔔 코덕후 새 포지션 발생!\n\n{latest}\n\n시간: {time_str}\n\n👉 {URL}")
+        send_telegram(f"🔔 코덕후 새 포지션 발생!\n\n{latest}\n\n👉 {URL}")
     else:
         print("✅ 변경 없음.")
 
     # GitHub Actions용 출력
     print(f"::set-output name=LAST_HASH::{current_hash}")
+
 
 if __name__ == "__main__":
     main()
