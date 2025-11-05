@@ -7,12 +7,14 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
+from datetime import datetime, timedelta
 
 URL = "https://wonyoddi.com/ccts/deog.ku"
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def fetch_latest_position():
+    """자바스크립트 렌더링 후 '최근 7일간 포지션' 첫 번째 행 추출"""
     try:
         chrome_options = Options()
         chrome_options.add_argument("--headless")
@@ -59,9 +61,11 @@ def fetch_latest_position():
         return None
 
 def send_telegram(msg):
+    """텔레그램으로 메시지 전송"""
     if not BOT_TOKEN or not CHAT_ID:
         print("⚠️ TELEGRAM_BOT_TOKEN 또는 CHAT_ID 환경변수가 없습니다.")
         return
+
     tg_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": msg}
     try:
@@ -85,16 +89,17 @@ def main():
     print("🔹 현재 해시:", current_hash)
 
     if last_hash != current_hash:
-        print("🔸 포지션 변경 감지!")
-        send_telegram(f"🔔 코덕후 새 포지션!\n\n{latest}\n\n👉 {URL}")
+        # 한국시간 표시
+        now_kst = datetime.utcnow() + timedelta(hours=9)
+        time_str = now_kst.strftime("%Y-%m-%d %H:%M:%S KST")
+
+        print("🔸 포지션 변경 감지됨!")
+        send_telegram(f"🔔 코덕후 새 포지션 발생!\n\n{latest}\n\n시간: {time_str}\n\n👉 {URL}")
     else:
         print("✅ 변경 없음.")
 
-    # GitHub Actions용 artifact 업로드 시 사용
-    os.makedirs("artifact", exist_ok=True)
-    with open("artifact/last-hash.txt", "w") as f:
-        f.write(current_hash)
-    print(f"🔹 새로운 LAST_HASH 기록: {current_hash}")
+    # GitHub Actions용 출력
+    print(f"::set-output name=LAST_HASH::{current_hash}")
 
 if __name__ == "__main__":
     main()
