@@ -3,7 +3,7 @@ name: Monitor Kodeeekhgoo Positions
 on:
   schedule:
     - cron: "*/5 * * * *"   # 5분마다 실행
-  workflow_dispatch:
+  workflow_dispatch:         # 수동 실행 가능
 
 jobs:
   run-script:
@@ -20,11 +20,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests beautifulsoup4 selenium webdriver-manager
+          pip install requests beautifulsoup4
 
       - name: Run Python script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          LAST_HASH: ${{ secrets.LAST_HASH }}
         run: python main.py
+
+      - name: Persist LAST_HASH between runs
+        uses: actions/upload-artifact@v3
+        with:
+          name: last-hash
+          path: last_hash.txt
