@@ -3,7 +3,7 @@ name: Monitor Kodeeekhgoo Positions
 on:
   schedule:
     - cron: "*/5 * * * *"   # 5분마다 실행
-  workflow_dispatch:         # 수동 실행 가능
+  workflow_dispatch:
 
 jobs:
   run-script:
@@ -28,7 +28,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
 
-      - name: Persist LAST_HASH between runs
+      - name: Save last_hash.txt as artifact
         uses: actions/upload-artifact@v3
         with:
           name: last-hash
