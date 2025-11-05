@@ -8,14 +8,11 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
-# ===== 설정 =====
 URL = "https://wonyoddi.com/ccts/deog.ku"
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-# =================
 
 def fetch_latest_position():
-    """자바스크립트 렌더링 후 '최근 7일간 포지션' 첫 번째 행 추출"""
     try:
         chrome_options = Options()
         chrome_options.add_argument("--headless")
@@ -88,13 +85,16 @@ def main():
     print("🔹 현재 해시:", current_hash)
 
     if last_hash != current_hash:
-        print("🔸 포지션 변경 감지됨!")
-        send_telegram(f"🔔 코덕후 새 포지션 발생!\n\n{latest}\n\n👉 {URL}")
+        print("🔸 포지션 변경 감지!")
+        send_telegram(f"🔔 코덕후 새 포지션!\n\n{latest}\n\n👉 {URL}")
     else:
         print("✅ 변경 없음.")
 
-    # GitHub Actions artifact 저장용 출력
-    print(f"::set-output name=LAST_HASH::{current_hash}")
+    # GitHub Actions용 artifact 업로드 시 사용
+    os.makedirs("artifact", exist_ok=True)
+    with open("artifact/last-hash.txt", "w") as f:
+        f.write(current_hash)
+    print(f"🔹 새로운 LAST_HASH 기록: {current_hash}")
 
 if __name__ == "__main__":
     main()
