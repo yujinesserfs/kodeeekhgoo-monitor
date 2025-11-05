@@ -2,7 +2,7 @@ name: Monitor Kodeeekhgoo Positions
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # 5분마다 실행 (UTC 기준)
+    - cron: "*/5 * * * *"   # 매 5분마다 실행
   workflow_dispatch:
 
 jobs:
@@ -26,5 +26,5 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          LAST_HASH: ${{ secrets.LAST_HASH }}  # 기존 LAST_HASH 사용 가능
+          LAST_HASH: ${{ secrets.LAST_HASH }}  # 기존 해시 저장용
         run: python main.py
