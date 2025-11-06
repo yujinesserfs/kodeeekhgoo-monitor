@@ -2,7 +2,7 @@ name: Monitor Kodeeekhgoo Positions
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # 매 5분마다 실행
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -26,5 +26,14 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          LAST_HASH: ${{ secrets.LAST_HASH }}  # 기존 해시 저장용
         run: python main.py
+
+      - name: Commit & Push hash update
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.email "actions@github.com"
+            git config user.name "GitHub Actions"
+            git add last_hash.txt
+            git commit -m "Update hash"
+            git push
+          fi
