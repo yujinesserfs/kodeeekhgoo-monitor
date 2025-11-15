@@ -13,6 +13,7 @@ URL = "https://wonyoddi.com/ccts/deog.ku"
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+print("🔍 RAW CHAT_ID env =", repr(os.getenv("TELEGRAM_CHAT_ID")))
 
 def load_last_hash():
     """리포지토리 파일에서 이전 해시 불러오기"""
