@@ -2,7 +2,7 @@ name: Monitor Kodeeekhgoo Positions
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/5 * * * *"  # 5분마다 실행
   workflow_dispatch:
 
 jobs:
@@ -37,3 +37,4 @@ jobs:
             git add last_hash.txt
             git commit -m "Update hash"
             git push
+          fi
