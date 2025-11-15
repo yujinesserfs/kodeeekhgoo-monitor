@@ -11,12 +11,14 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 URL = "https://wonyoddi.com/ccts/deog.ku"
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-print("🔍 RAW CHAT_ID env =", repr(os.getenv("TELEGRAM_CHAT_ID")))
+# 두 명의 Chat ID
+CHAT_ID_1 = os.getenv("TELEGRAM_CHAT_ID_1")
+CHAT_ID_2 = os.getenv("TELEGRAM_CHAT_ID_2")
+
+print("🔍 Loaded IDs:", CHAT_ID_1, CHAT_ID_2)
 
 def load_last_hash():
-    """리포지토리 파일에서 이전 해시 불러오기"""
     path = "last_hash.txt"
     if os.path.exists(path):
         return open(path).read().strip()
@@ -24,13 +26,11 @@ def load_last_hash():
 
 
 def save_last_hash(h):
-    """해시를 파일에 저장"""
     with open("last_hash.txt", "w") as f:
         f.write(h)
 
 
 def fetch_latest_position():
-    """셀레니움으로 최근 포지션 테이블 1행 추출"""
     try:
         options = Options()
         options.add_argument("--headless")
@@ -74,16 +74,27 @@ def fetch_latest_position():
 
         return " | ".join(cells)
 
-    except Exception:
+    except Exception as e:
+        print("❌ fetch_latest_position 에러:", e)
         return None
 
 
 def send_telegram(msg):
-    if not BOT_TOKEN or not CHAT_ID:
-        print("⚠️ 텔레그램 설정 없음")
+    if not BOT_TOKEN:
+        print("⚠️ BOT_TOKEN 없음")
         return
+
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
+
+    # 두 명에게 각각 보내기
+    for cid in [CHAT_ID_1, CHAT_ID_2]:
+        if not cid:
+            continue
+        try:
+            requests.post(url, data={"chat_id": cid, "text": msg})
+            print(f"📨 전송 완료 → Chat ID: {cid}")
+        except Exception as e:
+            print(f"❌ 전송 실패 → {cid}:", e)
 
 
 def main():
