@@ -37,4 +37,3 @@ jobs:
             git add last_hash.txt
             git commit -m "Update hash"
             git push
-          fi
