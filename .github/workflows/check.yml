@@ -34,7 +34,7 @@ jobs:
           if [[ -n "$(git status --porcelain)" ]]; then
             git config user.email "actions@github.com"
             git config user.name "GitHub Actions"
-            git add last_hash.txt
+            git add last_hash.txt last_hash2.txt
             git commit -m "Update hash"
             git push
           fi
