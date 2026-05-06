@@ -1,1 +1,1 @@
-kodeeekhgoo-monitor
+코덕후 + 흑우 모니터
