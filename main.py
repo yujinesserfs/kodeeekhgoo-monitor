@@ -5,7 +5,6 @@ import requests
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -38,27 +37,16 @@ def save_last_hash(filename, h):
     with open(filename, "w") as f:
         f.write(h)
 
-def fetch_latest_position(url):
-    driver = None
+def fetch_latest_position(driver, url):
 
     try:
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--window-size=1920,1080")
-
-        driver = webdriver.Chrome(
-            service=Service(ChromeDriverManager().install()),
-            options=options
-        )
-
         driver.get(url)
         time.sleep(5)
 
         soup = BeautifulSoup(driver.page_source, "html.parser")
 
         target = None
+
         for p in soup.find_all("p"):
             if "최근 7일간 포지션" in p.get_text():
                 target = p
@@ -85,8 +73,11 @@ def fetch_latest_position(url):
         # 시간 UTC -> KST 변환
         try:
             raw_time = cells[4]
+
             dt_obj = datetime.strptime(raw_time, "%Y-%m-%d %H:%M:%S")
+
             dt_kst = dt_obj + timedelta(hours=9)
+
             cells[4] = dt_kst.strftime("%Y-%m-%d %H:%M:%S KST")
 
         except Exception as e:
@@ -98,11 +89,8 @@ def fetch_latest_position(url):
         print(f"❌ fetch_latest_position 에러 ({url}):", e)
         return None
 
-    finally:
-        if driver:
-            driver.quit()
-
 def send_telegram(chat_id, msg):
+
     if not BOT_TOKEN:
         print("⚠️ BOT_TOKEN 없음 → 전송 스킵")
         return
@@ -126,37 +114,51 @@ def send_telegram(chat_id, msg):
 
 def main():
 
-    for target in TARGETS:
+    options = Options()
 
-        name = target["name"]
-        url = target["url"]
-        hash_file = target["hash_file"]
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1920,1080")
 
-        print(f"\n🔍 체크 시작: {name}")
+    driver = webdriver.Chrome(options=options)
 
-        last_hash = load_last_hash(hash_file)
+    try:
 
-        latest = fetch_latest_position(url)
+        for target in TARGETS:
 
-        if not latest:
-            print(f"❌ {name} 포지션 없음 또는 파싱 실패")
-            continue
+            name = target["name"]
+            url = target["url"]
+            hash_file = target["hash_file"]
 
-        current_hash = hashlib.md5(latest.encode()).hexdigest()
+            print(f"\n🔍 체크 시작: {name}")
 
-        if last_hash != current_hash:
+            last_hash = load_last_hash(hash_file)
 
-            print(f"🔸 {name} 포지션 변경 감지!")
+            latest = fetch_latest_position(driver, url)
 
-            message = f"🔔 {name} 새 포지션 발생!\n\n{latest}\n\n👉 {url}"
+            if not latest:
+                print(f"❌ {name} 포지션 없음 또는 파싱 실패")
+                continue
 
-            for cid in CHAT_IDS:
-                send_telegram(cid, message)
+            current_hash = hashlib.md5(latest.encode()).hexdigest()
 
-            save_last_hash(hash_file, current_hash)
+            if last_hash != current_hash:
 
-        else:
-            print(f"✅ {name} 변경 없음")
+                print(f"🔸 {name} 포지션 변경 감지!")
+
+                message = f"🔔 {name} 새 포지션 발생!\n\n{latest}\n\n👉 {url}"
+
+                for cid in CHAT_IDS:
+                    send_telegram(cid, message)
+
+                save_last_hash(hash_file, current_hash)
+
+            else:
+                print(f"✅ {name} 변경 없음")
+
+    finally:
+        driver.quit()
 
 if __name__ == "__main__":
     main()
